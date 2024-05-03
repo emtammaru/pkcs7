@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -678,3 +679,46 @@ VZXl0gKgxSOmDrcp1eQxdlymzrPv9U60wUJ0bkPfrU9qZj3mJrmrkQk61JTe3j6/
 QfjfFBG9JG2mUmYQP1KQ3SypGHzDW8vngvsGu//tNU0NFfOqQu4bYU4VpQl0nPtD
 4B85NkrgvQsWAQ==
 -----END PKCS7-----`
+
+func TestParseRaw(t *testing.T) {
+	inHex, err := os.ReadFile("testdata/pkcs7_hex.txt")
+	if err != nil {
+		t.Error(err)
+	}
+	expected, err := os.ReadFile("testdata/expected_raw_certs_hex.txt")
+	if err != nil {
+		t.Error(err)
+	}
+	in, err := hex.DecodeString(string(inHex))
+	if err != nil {
+		t.Error(err)
+	}
+	p7, err := ParseRaw(in)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(p7.CertsRaw) == 0 {
+		t.Error("expected raw certs data to be parsed")
+	}
+
+	actual := hex.EncodeToString(p7.CertsRaw)
+	if string(expected) != actual {
+		t.Errorf("expected does not match actual:\n\tExpected: %s\n\tActual: %s", string(expected), actual)
+	}
+}
+
+func FuzzParseRaw(f *testing.F) {
+	validPkcs7Hex, err := os.ReadFile("testdata/pkcs7_hex.txt")
+	if err != nil {
+		f.Error(err)
+	}
+	seed, err := hex.DecodeString(string(validPkcs7Hex))
+	if err != nil {
+		f.Error(err)
+	}
+	f.Add(seed)
+
+	f.Fuzz(func(t *testing.T, in []byte) {
+		ParseRaw(in)
+	})
+}
