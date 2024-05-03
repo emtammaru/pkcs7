@@ -706,3 +706,19 @@ func TestParseRaw(t *testing.T) {
 		t.Errorf("expected does not match actual:\n\tExpected: %s\n\tActual: %s", string(expected), actual)
 	}
 }
+
+func FuzzParseRaw(f *testing.F) {
+	validPkcs7Hex, err := os.ReadFile("testdata/pkcs7_hex.txt")
+	if err != nil {
+		f.Error(err)
+	}
+	seed, err := hex.DecodeString(string(validPkcs7Hex))
+	if err != nil {
+		f.Error(err)
+	}
+	f.Add(seed)
+
+	f.Fuzz(func(t *testing.T, in []byte) {
+		ParseRaw(in)
+	})
+}
